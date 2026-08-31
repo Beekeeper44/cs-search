@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS Search · Arena Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080b09; --panel:#0d120f; --panel2:#111713;
+  --line:#1c2620; --line2:#263329;
+  --txt:#ffffff; --dim:#ffffff; --dim2:#ffffff;
+  --green:#39FF14; --green-d:#1f8f12;
+  --amber:#f2b544; --cyan:#4fd6e0; --pink:#e86fd0; --red:#ff5c5c; --gold:#d8b45a;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"Helvetica Neue",Helvetica,Arial,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
+body{background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:16.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+a{color:var(--green);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+/* header */
+header{padding:22px 24px 0;border-bottom:1px solid var(--line);background:var(--panel)}
+.head-row{display:flex;align-items:flex-start;gap:18px}
+.brand{display:flex;flex-direction:row;align-items:center;gap:20px}
+.logo{width:112px;height:auto;display:block;flex:0 0 112px}
+.title{font-family:var(--sans);font-size:50px;font-weight:800;letter-spacing:-1.8px;line-height:.95;margin:0}
+.title .g{color:var(--green)}
+.sub{color:#fff;font-size:14.5px;margin-top:8px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 8px var(--green)}
+.head-right{margin-left:auto;display:flex;align-items:center;gap:14px;color:#fff;font-size:14.5px;white-space:nowrap}
+nav{display:flex;gap:2px;margin-top:20px}
+nav button{background:none;border:none;border-bottom:3px solid transparent;color:#fff;padding:17px 36px;letter-spacing:2px;font-size:20px;font-weight:500;cursor:pointer}
+nav button:hover{color:var(--green)}
+nav button.on{color:var(--green);border-bottom-color:var(--green)}
+nav .count{color:var(--green);margin-left:9px}
+
+main{padding:0 0 70px;max-width:100vw;overflow-x:hidden}
+.pane{display:none}
+.pane.on{display:block}
+.bar{background:var(--panel);border-bottom:1px solid var(--line);padding:20px 26px}
+.filters{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.f{display:flex;flex-direction:column;gap:6px}
+.f label{font-size:15px;letter-spacing:1.5px;color:#fff;font-weight:500}
+.f input,.f select{background:#0b100d;border:1px solid var(--line2);border-radius:5px;padding:14px 15px;min-width:210px;font-size:17px}
+.f input::placeholder{color:#8fd97f}
+.f.grow{flex:1;min-width:260px}
+.f.grow input{width:100%}
+.btn{background:#0b100d;border:1px solid var(--line2);border-radius:5px;padding:12px 19px;cursor:pointer;color:#fff;letter-spacing:.8px;font-size:15.5px}
+.btn:hover{border-color:var(--green-d)}
+.btn.primary{border-color:var(--green-d);color:var(--green);background:rgba(57,255,20,.06)}
+.btn.primary:hover{background:rgba(57,255,20,.14)}
+.btn.warn{border-color:#5a4318;color:var(--amber)}
+.btn.sm{padding:7px 13px;font-size:14.5px}
+.btn.run{background:var(--green);color:#06180a;border-color:var(--green);font-weight:700;letter-spacing:1.3px}
+.btn.run:hover{background:#4dff2e}
+
+/* stats */
+.stats{display:flex;align-items:stretch;background:linear-gradient(90deg,rgba(57,255,20,.05),transparent 55%);border-bottom:1px solid var(--line)}
+.stat-lead{padding:28px 32px;min-width:430px}
+.stat-lead .k{font-size:15px;letter-spacing:2px;color:var(--green);margin-bottom:8px}
+.stat-lead .v{font-size:76px;font-weight:700;line-height:1;letter-spacing:-3px}
+.stat-lead .row{display:flex;align-items:baseline;gap:18px}
+.stat-lead .lbl{font-size:22px}
+.stat-lead .note{font-size:14px;margin-top:12px;color:#fff}
+.stat{padding:28px 34px;border-left:1px solid var(--line);display:flex;flex-direction:column;justify-content:center;min-width:170px}
+.stat .k{font-size:15px;letter-spacing:1.6px;margin-bottom:12px;color:#fff;font-weight:500}
+.stat .v{font-size:44px;font-weight:700;line-height:1;letter-spacing:-1px}
+.stat .v.green{color:var(--green)}
+
+.sec{margin:24px;max-width:calc(100vw - 48px);border:1px solid var(--line);border-radius:7px;background:var(--panel);overflow:hidden}
+.sec-h{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.sec-h .tag{border-left:3px solid var(--green);padding-left:10px;letter-spacing:2px;font-size:16.5px;color:#fff}
+.sec-h .meta{font-size:15px;color:#fff}
+.sec-h .right{margin-left:auto;display:flex;gap:9px}
+
+.tw{overflow:auto;max-height:60vh}
+table{border-collapse:collapse;width:100%;white-space:nowrap}
+thead th{position:sticky;top:0;background:var(--panel2);z-index:2;text-align:left;font-size:13.5px;letter-spacing:1.3px;color:#fff;font-weight:600;padding:12px 14px;border-bottom:1px solid var(--line2)}
+tbody td{padding:13px 15px;border-bottom:1px solid #141b17;font-size:16px}
+tbody tr:hover{background:#121a15}
+tbody tr.hit{background:rgba(57,255,20,.09)}
+tbody tr.hit td:first-child{box-shadow:inset 3px 0 0 var(--green)}
+.empty{padding:52px 20px;text-align:center;font-size:17px}
+
+.chip{display:inline-block;border-radius:999px;padding:5px 13px;font-size:14px;border:1px solid;letter-spacing:.4px}
+.c-gray{color:#fff;border-color:#2b3a32;background:#141c18}
+.c-green{color:var(--green);border-color:#215b16;background:rgba(57,255,20,.08)}
+.c-amber{color:var(--amber);border-color:#5a4318;background:rgba(242,181,68,.08)}
+.c-cyan{color:var(--cyan);border-color:#1d4b50;background:rgba(79,214,224,.08)}
+.c-pink{color:var(--pink);border-color:#5a2a50;background:rgba(232,111,208,.08)}
+.c-red{color:var(--red);border-color:#5d2222;background:rgba(255,92,92,.08)}
+.c-orange{color:#fff;border-color:#d2673f;background:#d2673f;font-weight:500}
+.c-gold{color:var(--gold);border-color:#5a4a1e;background:rgba(216,180,90,.08)}
+
+/* scan layout */
+.scan-wrap{margin:24px;display:grid;grid-template-columns:500px minmax(0,1fr);gap:22px;align-items:start}
+.scan-col{position:sticky;top:16px}
+.scan-box{border:1px solid var(--line);border-radius:7px;background:var(--panel);margin-bottom:16px;overflow:hidden}
+.box-h{display:flex;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.box-h .t{letter-spacing:1.8px;font-size:16.5px;color:#fff}
+.box-h .r{margin-left:auto;font-size:13.5px;letter-spacing:1.2px;color:#fff}
+.box-b{padding:20px 18px}
+.fieldset .fl{display:flex;align-items:baseline;gap:10px}
+.fieldset .n{letter-spacing:1.8px;font-size:17px;color:var(--green)}
+.fieldset.arena .n{color:var(--gold)}
+.fieldset .h{margin-left:auto;font-size:13.5px;color:#fff}
+.fieldset .fd{font-size:14px;margin:6px 0 11px;color:#fff}
+.fieldset input{width:100%;background:#0b100d;border:1px solid var(--green-d);border-radius:6px;padding:18px 17px;font-size:23px;letter-spacing:1.6px;color:var(--green)}
+.fieldset.arena input{border-color:#5a4a1e;color:var(--gold)}
+.fieldset input::placeholder{color:#5fbf4d;letter-spacing:.6px;font-size:18px}
+.fieldset.arena input::placeholder{color:#c2a659}
+.andor{display:flex;align-items:center;gap:12px;margin:18px 0;font-size:13.5px;letter-spacing:1.6px;color:#fff}
+.andor:before,.andor:after{content:"";flex:1;height:1px;background:var(--line2)}
+.run-row{display:flex;gap:11px;margin-top:20px}
+.run-row .btn.run{flex:1;padding:18px;font-size:18px}
+.run-row .btn{padding:18px 24px;font-size:17px}
+.scan-status{margin-top:18px;padding-top:15px;border-top:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.scan-status .ind{font-size:14px;display:flex;align-items:center;gap:8px;color:#fff}
+.scan-status .ind i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green)}
+.scan-status .tgl{margin-left:auto;font-size:14px;display:flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
+.scan-status .tgl input{accent-color:var(--green);width:15px;height:15px;cursor:pointer}
+.scanning .scan-status .ind i{background:var(--gold);box-shadow:0 0 7px var(--gold)}
+.scan-hint{font-size:14px;margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;color:#fff}
+kbd{border:1px solid var(--line2);border-radius:3px;padding:3px 7px;font-size:13.5px;color:#fff}
+
+/* result */
+.result{border:1px solid var(--line);border-radius:7px;background:var(--panel);overflow:hidden;max-width:100%}
+.result.miss{border-color:#5d2222}
+.res-hero{padding:30px 24px 24px;text-align:center;border-bottom:1px solid var(--line);background:radial-gradient(120% 130% at 50% 0,rgba(57,255,20,.08),transparent 62%)}
+.res-hero .k{font-size:14.5px;letter-spacing:2px;margin-bottom:13px;color:#fff}
+.res-hero .big{font-family:var(--sans);font-size:70px;font-weight:800;letter-spacing:-2.5px;line-height:1}
+.res-hero .big a{color:#fff}
+.res-hero .big a:hover{color:var(--green);text-decoration:none}
+.res-hero .under{color:#fff;margin-top:16px;display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;font-size:15px}
+.res-fields{padding:22px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:22px 30px;border-bottom:1px solid var(--line)}
+.fld .k{font-size:14px;letter-spacing:1.4px;margin-bottom:6px;color:#fff;font-weight:500}
+.fld .v{font-size:20px;word-break:break-word}
+.fld .v.big{font-size:30px;font-weight:700}
+.copy{background:none;border:none;color:var(--green);cursor:pointer;font-size:13.5px;padding:0 0 0 8px}
+.copy:hover{text-decoration:underline}
+.res-actions{padding:14px 22px;border-bottom:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;background:var(--panel2)}
+.res-card{padding:20px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px 28px;border-bottom:1px solid var(--line);background:#0b100d}
+.miss-box{padding:52px 26px;text-align:center}
+.miss-box .big{font-family:var(--sans);font-size:56px;font-weight:800;letter-spacing:-1.8px;color:var(--red);line-height:1}
+.miss-box .p{font-size:17px;margin:16px auto 0;max-width:56ch}
+.res-idle{border:1px dashed var(--line2);border-radius:7px;background:var(--panel);padding:90px 26px;text-align:center}
+.res-idle .k{font-size:14.5px;letter-spacing:2px;margin-bottom:16px;color:#fff}
+.res-idle .big{font-family:var(--sans);font-size:54px;font-weight:800;letter-spacing:-1.8px;line-height:1}
+.res-idle .p{font-size:16px;margin-top:18px}
+
+/* done bar */
+.done-bar{padding:18px 22px;background:#0b100d;border-bottom:1px solid var(--line)}
+.done-h{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+.done-h .t{letter-spacing:1.8px;font-size:16.5px;color:var(--green)}
+.done-h .r{font-size:14.5px;color:#fff}
+.done-row{display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+.who{display:flex;gap:8px}
+.member{background:#0b100d;border:1px solid var(--line2);border-radius:5px;padding:14px 26px;cursor:pointer;color:#fff;letter-spacing:1.3px;font-size:17px}
+.member:hover{border-color:var(--green-d)}
+.member.on{background:rgba(57,255,20,.12);border-color:var(--green);color:var(--green)}
+.done-row select,.done-row input{background:#0b100d;border:1px solid var(--line2);border-radius:5px;padding:14px 15px;font-size:17px}
+.done-row select{min-width:210px}
+.done-row input{flex:1;min-width:200px}
+.done-row .btn.run{padding:14px 30px;font-size:17px}
+
+/* session log */
+.log{border:1px solid var(--line);border-radius:7px;background:var(--panel)}
+.log-h{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;background:var(--panel2)}
+.log-h .tag{letter-spacing:1.8px;font-size:16.5px;color:#fff}
+.log-h .right{margin-left:auto;display:flex;gap:7px}
+.log-list{max-height:34vh;overflow:auto}
+.log-item{padding:12px 16px;border-bottom:1px solid #141b17;cursor:pointer;display:flex;gap:12px;align-items:center}
+.log-item:hover{background:#121a15}
+.log-item .l{flex:1;min-width:0}
+.log-item .code{font-size:17px;letter-spacing:.6px}
+.log-item .sub2{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+.log-item.bad .code{color:var(--red)}
+.log-empty{padding:32px 16px;font-size:15.5px;text-align:center}
+
+.flash{animation:flash 1.2s ease}
+@keyframes flash{0%,100%{background:transparent}30%{background:rgba(57,255,20,.12)}}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:#0b100d;border:1px solid var(--green-d);color:var(--green);padding:13px 22px;border-radius:6px;transition:.2s;z-index:60;pointer-events:none;font-size:15.5px}
+.toast.on{opacity:1;transform:translateX(-50%)}
+@media (max-width:1100px){.scan-wrap{grid-template-columns:1fr}.scan-col{position:static}.stats{flex-wrap:wrap}.stat-lead{min-width:100%}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <div class="brand">
+      <img class="logo" alt="Arena Club" src="data:image/png;base64,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">
+      <div>
+        <h1 class="title"><span class="g">C</span>S <span class="g">S</span>earch</h1>
+        <div class="sub"><span class="dot"></span> Return to sender · scan a slab, get the retrieval order it shipped in</div>
+      </div>
+    </div>
+    <div class="head-right">
+      <span id="hRows"></span>
+      <span id="hClock"></span>
+    </div>
+  </div>
+  <nav>
+    <button class="on" data-pane="scan">SCAN</button>
+    <button data-pane="history">HISTORY<span class="count" id="histCount"></span></button>
+  </nav>
+</header>
+
+<main>
+<section class="pane on" id="pane-scan">
+  <div class="scan-wrap">
+    <div class="scan-col">
+      <div class="scan-box">
+        <div class="box-h"><span class="t">SCAN PARAMETERS</span><span class="r">BARCODE · QR · TYPED</span></div>
+        <div class="box-b">
+          <div class="fieldset">
+            <div class="fl"><span class="n">PRE-GRADED SLABS</span><span class="h">Exact cert match</span></div>
+            <div class="fd">PSA cert number off the slab label</div>
+            <input id="scanCert" autocomplete="off" spellcheck="false" placeholder="e.g. 79067707">
+          </div>
+          <div class="andor"><span>AND / OR</span></div>
+          <div class="fieldset arena">
+            <div class="fl"><span class="n">ARENA SLABS</span><span class="h">8AC prefix added</span></div>
+            <div class="fd">*ACNumber — barcode on the Arena Club slab</div>
+            <input id="scanAc" autocomplete="off" spellcheck="false" placeholder="e.g. 8AC3975830 or 3975830">
+          </div>
+          <div class="run-row">
+            <button class="btn run" id="runLookup">RUN LOOKUP ⏎</button>
+            <button class="btn" id="clearScan">CLEAR</button>
+          </div>
+          <div class="scan-status">
+            <span class="ind"><i></i> Scanner ready — fire the gun anywhere on this tab</span>
+            <label class="tgl"><input type="checkbox" id="autoSubmit" checked> Auto-submit</label>
+          </div>
+          <div class="scan-hint">
+            <span><kbd>/</kbd> cert</span><span><kbd>\</kbd> 8AC</span><span><kbd>Esc</kbd> clear</span>
+            <span><a href="#" data-demo="cert" data-value="79067707">example: cert 79067707</a></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="log">
+        <div class="log-h"><span class="tag">SESSION SCANS</span>
+          <span class="right"><button class="btn sm" id="logCsv">CSV</button><button class="btn sm" id="logClear">CLEAR</button></span>
+        </div>
+        <div class="log-list" id="logList"></div>
+      </div>
+    </div>
+    <div id="resultHost"></div>
+  </div>
+</section>
+
+<section class="pane" id="pane-history">
+  <div class="stats">
+    <div class="stat-lead">
+      <div class="k">WORK LOGGED TODAY</div>
+      <div class="row"><div class="v" id="hTotal">0</div><div class="lbl">items done</div></div>
+      <div class="note">Session only · clears on reload</div>
+    </div>
+    <div class="stat"><div class="k">ANTHONY</div><div class="v green" id="hAnthony">0</div></div>
+    <div class="stat"><div class="k">MARISA</div><div class="v green" id="hMarisa">0</div></div>
+    <div class="stat"><div class="k">CARDS TOUCHED</div><div class="v" id="hCards">0</div></div>
+    <div class="stat"><div class="k">ORDERS</div><div class="v" id="hOrders">0</div></div>
+    <div class="stat"><div class="k">LAST ENTRY</div><div class="v" id="hLast" style="font-size:26px">—</div></div>
+  </div>
+  <div class="bar">
+    <div class="filters">
+      <div class="f"><label>TEAM MEMBER</label><select id="hMember"><option value="">Everyone</option><option>Anthony</option><option>Marisa</option></select></div>
+      <div class="f"><label>OUTCOME</label><select id="hOutcome"><option value="">All outcomes</option></select></div>
+      <div class="f grow"><label>SEARCH</label><input id="hSearch" placeholder="cert, 8AC, player, order #, customer, note…"></div>
+      <button class="btn" id="hReset">RESET</button>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sec-h"><span class="tag">COMPLETED WORK</span><span class="meta" id="hMeta">0 entries</span>
+      <span class="right"><button class="btn sm" id="hCsv">EXPORT CSV</button><button class="btn sm" id="hClear">CLEAR LOG</button></span>
+    </div>
+    <div class="tw"><table><thead><tr>
+      <th>COMPLETED AT</th><th>TEAM MEMBER</th><th>OUTCOME</th><th>NOTE</th>
+      <th>ORDER_URL</th><th>USERNAME</th><th>USER_EMAIL</th><th>FRONT_SLAB_PICTURE_URL</th>
+      <th>ORDER_NUMBER</th><th>CERT_NUMBER</th><th>AC_NUMBER</th><th>GRADE</th><th>SET_NAME</th>
+      <th>PLAYER_NAME</th><th>INSERT</th><th>PARALLEL_NAME</th><th>PARALLEL_TOTAL</th><th>SPORT</th>
+      <th>PO_NUMBERS</th><th>ORDER_KIND</th><th>ORDER_CREATED_AT</th><th>ORDER_PROCESSED_AT</th>
+      <th>CUSTOMER_NAME</th><th>ORDER_SOURCE</th><th>ORDER_DETAIL</th><th>CARDS_IN_SHIPMENT</th><th>CARD_STATUS</th><th></th>
+    </tr></thead><tbody id="hBody"></tbody></table></div>
+  </div>
+</section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CS SEARCH — Arena Club customer service, return-to-sender lookup.
+   Data shape mirrors Metabase question 4093 "Cards Life-Cycle":
+   order_url, username, user_email, order_number, cert_number,
+   ac_number, grade, set_name, player_name, insert, parallel_name,
+   parallel_total, sport, po_numbers, order_kind, order_created_at,
+   order_processed_at, customer_name, order_source, order_detail,
+   card_status. A card has MANY order rows; the retrieval order is
+   the row with order_kind = 'retrieve'.
+   ============================================================ */
+/* ============================================================
+   LIVE DATA — Metabase question 4093 "Cards Life-Cycle"
+   via /api/lookup (serverless, key stays on the server)
+   ============================================================ */
+const CARD_STATUS=[
+  {k:"pending_shipping",c:"c-green"},{k:"shipped",c:"c-green"},{k:"delivered",c:"c-green"},
+  {k:"return_to_sender",c:"c-red"},{k:"pending_external_checkout",c:"c-amber"},
+  {k:"pending_grading",c:"c-amber"},{k:"pending_slabbing",c:"c-pink"},{k:"vaulted",c:"c-gray"}
+];
+const statusClass=k=>(CARD_STATUS.find(s=>s.k===k)||{c:"c-gray"}).c;
+const KIND_CLASS={retrieve:"c-orange",slab_pack:"c-pink",repack:"c-pink",submit:"c-gold",purchase:"c-cyan"};
+
+async function api(path,opts){
+  const r=await fetch(path,Object.assign({headers:{"Content-Type":"application/json"}},opts||{}));
+  let body=null;
+  try{body=await r.json()}catch(e){}
+  if(!r.ok)throw Object.assign(new Error((body&&body.error)||("HTTP "+r.status)),{status:r.status,body});
+  return body;
+}
+/* the API returns the same shape the renderers already expect */
+async function fetchLookup(token,mode){
+  const q=new URLSearchParams();
+  q.set(mode==="ac"?"ac":"cert",token);
+  const d=await api("/api/lookup?"+q.toString());
+  if(!d||!d.found)return null;
+  const o=d.retrieval;
+  o.statusClass=statusClass(o.status);
+  o.cards=d.shipment||[];
+  const c=d.card;
+  if(c){c.order=o;c.statusClass=statusClass(c.status)}
+  return{card:c,order:o,how:d.matchedOn};
+}
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const chip=(t,c)=>`<span class="chip ${c}">${esc(t)}</span>`;
+const orderUrl=id=>"https://admin.arenaclub.com/orders/"+id;
+const dash="—";
+const slabIcon=()=>'<svg width="20" height="26" viewBox="0 0 20 26" style="vertical-align:middle"><rect x="1" y="1" width="18" height="24" rx="2" fill="#101a14" stroke="#39FF14" stroke-width="1.5"/><rect x="4" y="4" width="12" height="4" fill="#39FF14" opacity=".5"/><rect x="4" y="10" width="12" height="12" fill="#2a3a30"/></svg>';
+/* the retrieve row of a card's life-cycle — the one CS acts on */
+function retrieveRow(o,c){
+  if(c&&c.lifecycle){const r=c.lifecycle.find(x=>x.kind==="retrieve");if(r)return r}
+  return{order:o.id,kind:"retrieve",source:o.source||"order",created:o.createdStr,processed:o.processedStr,
+    customer:o.customer,username:o.username,email:o.email,po:o.po||"",detail:"",status:o.status};
+}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2000)}
+function copy(txt){
+  const done=()=>toast("Copied  "+txt.slice(0,44)+(txt.length>44?"…":""));
+  if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(txt).then(done,fb);else fb();
+  function fb(){const ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity=0;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");done()}catch(e){toast("Copy blocked by the browser")}ta.remove()}
+}
+function csv(rows,name){
+  const body=rows.map(r=>r.map(v=>{v=v==null?"":String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([body],{type:"text/csv"}));a.download=name;a.click();
+  toast("Exported "+name);
+}
+$("#hRows").textContent="question 4093";
+/* say plainly whether the Metabase connection is actually wired up */
+api("/api/health").then(h=>{
+  $("#hRows").textContent="question "+(h.cards_question_id||"4093")+(h.metabase?" · connected":" · not configured");
+  if(!h.metabase)toast("Metabase env vars are missing — see /api/health");
+}).catch(()=>{$("#hRows").textContent="question 4093 · api unreachable"});
+setInterval(()=>{$("#hClock").textContent=new Date().toLocaleTimeString([],{hour12:false})},1000);
+
+$$("nav button").forEach(b=>b.onclick=()=>{
+  $$("nav button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+  $$(".pane").forEach(p=>p.classList.remove("on"));$("#pane-"+b.dataset.pane).classList.add("on");
+  if(b.dataset.pane==="scan")setTimeout(()=>SCAN.cert.focus(),30);
+});
+
+/* ============================================================
+   SCAN NORMALIZATION + LOOKUP
+   ============================================================ */
+function normalizeScan(raw){
+  let v=String(raw==null?"":raw).replace(/[\u0000-\u001f\u007f]/g,"").trim();
+  if(!v)return{token:"",hint:null};
+  if(/^[\[{]/.test(v)){
+    try{const j=JSON.parse(v),o=Array.isArray(j)?j[0]||{}:j;
+      const ac=o.ac_number||o.acNumber||o.ac,ct=o.cert_number||o.certNumber||o.cert;
+      if(ac)return{token:String(ac).toUpperCase(),hint:"ac"};
+      if(ct)return{token:String(ct).toUpperCase(),hint:"cert"};
+    }catch(e){}
+  }
+  if(/^(https?:)?\/\//i.test(v)||v.includes("?")){
+    try{
+      const u=new URL(v.startsWith("http")?v:"https://x/"+v.replace(/^\/+/,"")),q=u.searchParams;
+      const ac=q.get("ac_number")||q.get("ac"),ct=q.get("cert_number")||q.get("cert"),on=q.get("order")||q.get("order_number");
+      if(ac)return{token:ac.toUpperCase(),hint:"ac"};
+      if(ct)return{token:ct.toUpperCase(),hint:"cert"};
+      if(on)return{token:on.toUpperCase(),hint:"order"};
+      const seg=u.pathname.split("/").filter(Boolean).pop();
+      if(seg)v=decodeURIComponent(seg);
+    }catch(e){}
+  }
+  v=v.toUpperCase().replace(/^(PSA|CERT|CERT NO|CERT#|SERIAL)[\s:#._-]*/,"").replace(/[\s._\-#]/g,"");
+  return{token:v,hint:/AC/.test(v)?"ac":null};
+}
+const stripZeros=v=>v.replace(/^0+/,"")||"0";
+/* Local routing only — the match itself happens server-side against 4093. */
+function routeScan(raw){
+  const{token,hint}=normalizeScan(raw);
+  return(hint==="ac"||/^8?AC/.test(token))?"ac":"cert";
+}
+function scanToken(raw,mode){
+  const{token,hint}=normalizeScan(raw);
+  const explicitAc=hint==="ac"||/^8?AC/.test(token);
+  return{
+    token:stripZeros((explicitAc?token.replace(/^8?AC/,""):token).replace(/\D/g,"")),
+    mode:(explicitAc||mode==="ac")?"ac":"cert"
+  };
+}
+
+/* ============================================================
+   RESULT
+   ============================================================ */
+const session=[];
+function renderResult(hit,raw){
+  const host=$("#resultHost");
+  if(hit===undefined){
+    host.innerHTML=`<div class="res-idle"><div class="k">RESULT</div><div class="big">AWAITING SCAN</div>
+      <div class="p">Scan a pre-graded slab cert or an Arena slab 8AC number on the left.<br>The retrieval order it shipped in lands here.</div></div>`;
+    return;
+  }
+  if(!hit){
+    host.innerHTML=`<div class="result miss"><div class="miss-box"><div class="big">NO MATCH</div>
+      <div class="p">No card life-cycle row uses <b>${esc(raw)}</b> as a cert number, AC number, or order number.
+      Re-scan the slab label, or check the cert on PSA's site. A card with no AC number was never vaulted here.</div></div></div>`;
+    return;
+  }
+  const o=hit.order||hit.card.order,c=hit.card,age=daysAgo(o.shipDate);
+  host.innerHTML=`
+  <div class="result">
+    <div class="res-hero">
+      <div class="k">RETRIEVAL ORDER</div>
+      <div class="big"><a href="${orderUrl(o.id)}" target="_blank" rel="noopener">${o.id}</a></div>
+      <div class="under">${chip(o.status,o.statusClass)}${chip("order_kind: "+(o.kind||"order"),o.kind==="retrieve"?"c-orange":"c-amber")}${o.noRetrieveRow?chip("no retrieve row — showing newest order","c-amber"):""}<span>matched on ${hit.how}</span></div>
+    </div>
+    <div class="done-bar">
+      <div class="done-h"><span class="t">FINISH THIS ITEM</span><span class="r">logs to History under the team member below</span></div>
+      <div class="done-row">
+        <div class="who" id="whoPick"><button class="member" data-member="Anthony">ANTHONY</button><button class="member" data-member="Marisa">MARISA</button></div>
+        <select id="doneOutcome"></select>
+        <input id="doneNote" placeholder="Note (optional)">
+        <button class="btn run" id="doneGo">MARK DONE</button>
+      </div>
+    </div>
+    ${c?`<div class="res-card">
+      <div class="fld"><div class="k">AC NUMBER</div><div class="v">${c.ac}</div></div>
+      <div class="fld"><div class="k">CERT NUMBER</div><div class="v">${c.cert}</div></div>
+      <div class="fld"><div class="k">PLAYER NAME</div><div class="v">${esc(c.player)}</div></div>
+      <div class="fld"><div class="k">SET NAME</div><div class="v">${esc(c.set)}</div></div>
+      <div class="fld"><div class="k">INSERT</div><div class="v">${esc(c.insert)}</div></div>
+      <div class="fld"><div class="k">PARALLEL NAME</div><div class="v">${esc(c.parallel)}${c.parallelTotal?" /"+c.parallelTotal:""}</div></div>
+      <div class="fld"><div class="k">GRADE</div><div class="v">${esc(c.grade)}</div></div>
+      <div class="fld"><div class="k">SPORT</div><div class="v">${esc(c.sport)}</div></div>
+      <div class="fld"><div class="k">CARD STATUS</div><div class="v">${chip(c.status,c.statusClass)}</div></div>
+    </div>`:""}
+    <div class="res-fields">
+      <div class="fld"><div class="k">CUSTOMER NAME</div><div class="v">${esc(o.customer)}<button class="copy" data-copy="${esc(o.customer)}">copy</button></div></div>
+      <div class="fld"><div class="k">USER EMAIL</div><div class="v">${esc(o.email)}<button class="copy" data-copy="${esc(o.email)}">copy</button></div></div>
+      <div class="fld"><div class="k">USERNAME</div><div class="v">${esc(o.username)||dash}</div></div>
+      <div class="fld"><div class="k">CARDS IN SHIPMENT</div><div class="v big">${o.cards.length||dash}</div></div>
+      <div class="fld"><div class="k">SHIP DATE</div><div class="v big">${esc(o.shipDateStr)||dash}</div><div style="font-size:14px;color:#fff">${o.processedStr&&o.processedStr!=="—"?"order processed":"not processed yet"}</div></div>
+      <div class="fld"><div class="k">ORDER CREATED</div><div class="v" style="font-size:17px">${esc(o.createdStr)}</div></div>
+      <div class="fld"><div class="k">ORDER SOURCE</div><div class="v" style="font-size:17px">${esc(o.source)||dash}</div></div>
+      <div class="fld"><div class="k">PO NUMBERS</div><div class="v" style="font-size:17px">${esc(o.po)||dash}</div></div>
+    </div>
+    <div class="res-actions">
+      <button class="btn primary" data-act="copysum">COPY CS SUMMARY</button>
+      <button class="btn" data-act="email">EMAIL CUSTOMER</button>
+      <a class="btn" href="${orderUrl(o.id)}" target="_blank" rel="noopener">OPEN ORDER</a>
+      <button class="btn" data-act="drawer">VIEW ALL ${o.cards.length} CARDS</button>
+    </div>
+    ${c?lifecycleTable(c):""}
+    ${orderCardsTable(o,c)}
+  </div>`;
+  host.querySelectorAll(".copy").forEach(b=>b.onclick=()=>copy(b.dataset.copy));
+  host.querySelector('[data-act="copysum"]').onclick=()=>copy(summary(o,c));
+  host.querySelector('[data-act="email"]').onclick=()=>{location.href="mailto:"+o.email+"?subject="+encodeURIComponent("Arena Club retrieval order "+o.id)};
+  host.querySelector('[data-act="drawer"]').onclick=()=>{
+    const t=host.querySelector("#shipTable");
+    if(!t)return;
+    t.scrollIntoView({behavior:"smooth",block:"start"});
+    t.classList.add("flash");setTimeout(()=>t.classList.remove("flash"),1200);
+  };
+  wireDone(host,o,c,raw);
+}
+
+function lifecycleTable(c){
+  return `<div class="sec" style="margin:0;border:none;border-radius:0">
+    <div class="sec-h"><span class="tag">CARD LIFE-CYCLE</span><span class="meta">${c.lifecycle.length} order rows · cert ${c.cert} · AC ${c.ac}</span></div>
+    <div class="tw" style="max-height:300px"><table><thead><tr>
+      <th>ORDER NUMBER</th><th>ORDER KIND</th><th>ORDER SOURCE</th><th>ORDER CREATED AT</th><th>ORDER PROCESSED AT</th>
+      <th>CUSTOMER NAME</th><th>USERNAME</th><th>USER EMAIL</th><th>PO</th><th>ORDER DETAIL</th><th>CARD STATUS</th>
+    </tr></thead><tbody>
+    ${c.lifecycle.map(r=>`<tr class="${r.kind==="retrieve"?"hit":""}">
+      <td>${r.url?`<a href="${orderUrl(r.order)}" target="_blank" rel="noopener">${r.order}</a>`:r.order}</td>
+      <td>${chip(r.kind,KIND_CLASS[r.kind]||"c-gray")}</td>
+      <td>${esc(r.source)}</td><td>${esc(r.created)}</td><td>${esc(r.processed)||dash}</td>
+      <td>${esc(r.customer)}</td><td>${esc(r.username)}</td><td>${esc(r.email)}</td>
+      <td>${esc(r.po)||dash}</td><td>${esc(r.detail)||dash}</td>
+      <td>${chip(r.status,statusClass(r.status))}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+}
+function orderCardsTable(o,hit){
+  if(!o.cards||!o.cards.length)return `<div class="sec" id="shipTable" style="margin:0;border:none;border-radius:0">
+    <div class="sec-h"><span class="tag">CARDS IN THIS SHIPMENT</span><span class="meta">order ${o.id}</span></div>
+    <div class="empty">Shipment contents need an order_number filter on the question.<br>See ORDER_QUESTION_ID in the README.</div></div>`;
+  return `<div class="sec" id="shipTable" style="margin:0;border:none;border-radius:0">
+    <div class="sec-h"><span class="tag">CARDS IN THIS SHIPMENT</span><span class="meta">${o.cards.length} card${o.cards.length>1?"s":""} · order ${o.id}</span></div>
+    <div class="tw" style="max-height:300px"><table><thead><tr>
+      <th>SLOT</th><th>AC NUMBER</th><th>CERT NUMBER</th><th>PLAYER NAME</th><th>SET NAME</th><th>INSERT</th><th>PARALLEL NAME</th><th>GRADE</th><th>SPORT</th>
+    </tr></thead><tbody>
+    ${o.cards.map(x=>`<tr class="${hit&&x.ac===hit.ac?"hit":""}">
+      <td>${x.slot}</td><td>${x.ac}</td><td>${x.cert}</td><td>${esc(x.player)}</td><td>${esc(x.set)}</td>
+      <td>${esc(x.insert)}</td><td>${esc(x.parallel)}</td><td>${esc(x.grade)}</td><td>${esc(x.sport)}</td></tr>`).join("")}
+    </tbody></table></div></div>`;
+}
+function summary(o,c){
+  return ["Retrieval order: "+o.id,"Link: "+orderUrl(o.id),
+    "Customer: "+o.customer+" ("+o.username+")","Email: "+o.email,
+    "Cards in shipment: "+(o.cards.length||"unknown"),"Ship date: "+o.shipDateStr,
+    "Order created: "+o.createdStr,"Card status: "+o.status,
+    c?("Card: AC "+c.ac+" / cert "+c.cert+" — "+c.player+", "+c.set+" "+c.insert+" "+c.parallel+", "+c.grade):""
+  ].filter(Boolean).join("\n");
+}
+
+/* ============================================================
+   SCANNER INPUT — barcode guns, QR readers, and typing
+   ============================================================ */
+const SCAN={cert:$("#scanCert"),ac:$("#scanAc")};
+const BURST_MS=35,IDLE_MS=90;
+let autoSubmit=true;
+const isTerm=e=>e.key==="Enter"||e.key==="Tab"||e.keyCode===13||e.keyCode===9;
+
+let scanSeq=0;
+async function doScan(raw,mode){
+  const{token,mode:m}=scanToken(raw,mode);
+  const entry={t:new Date(),raw:String(raw).trim(),hit:null,mode:m,pending:true};
+  session.unshift(entry);renderLog();
+  SCAN.cert.value="";SCAN.ac.value="";
+  const seq=++scanSeq;
+  renderLoading(entry.raw);
+  let hit=null,err=null;
+  try{hit=await fetchLookup(token,m)}catch(e){err=e}
+  if(seq!==scanSeq)return;               // a newer scan landed first
+  entry.pending=false;entry.hit=hit;entry.error=err;
+  renderLog();
+  if(err){renderError(err,entry.raw);return}
+  renderResult(hit,entry.raw);
+  if(!hit)toast("No match for "+entry.raw);
+  else if(m==="cert"&&hit.how==="8AC barcode")toast("Arena slab — matched on its AC number");
+  else if(m==="ac"&&hit.how==="PSA cert")toast("Pre-graded slab — matched on its PSA cert");
+}
+function renderLoading(raw){
+  $("#resultHost").innerHTML=`<div class="res-idle"><div class="k">QUERYING METABASE</div>
+    <div class="big">${esc(raw)}</div><div class="p">Running question 4093…</div></div>`;
+}
+function renderError(err,raw){
+  const cfg=err.status===503;
+  $("#resultHost").innerHTML=`<div class="result miss"><div class="miss-box">
+    <div class="big">${cfg?"NOT CONFIGURED":"LOOKUP FAILED"}</div>
+    <div class="p">${cfg
+      ?"Set METABASE_URL, METABASE_API_KEY and CARDS_QUESTION_ID in the Vercel project, then redeploy."
+      :"Metabase did not answer for <b>"+esc(raw)+"</b>. "+esc(err.message||"")+" — try again, or check the question in Metabase."}</div>
+  </div></div>`;
+}
+
+Object.entries(SCAN).forEach(([mode,el])=>{
+  let last=0,fast=0,timer=null;
+  el.addEventListener("keydown",e=>{
+    if(isTerm(e)){e.preventDefault();clearTimeout(timer);fast=0;if(el.value.trim())doScan(el.value,mode);return}
+    const now=performance.now(),gap=now-last;last=now;
+    if(e.key.length===1){
+      fast=gap<BURST_MS?fast+1:0;
+      if(autoSubmit){clearTimeout(timer);timer=setTimeout(()=>{
+        if(fast>=5&&el.value.trim().length>=5){fast=0;doScan(el.value,mode)}},IDLE_MS+40)}
+    }
+  });
+  el.addEventListener("paste",e=>{
+    const t=(e.clipboardData||window.clipboardData).getData("text");
+    if(!t)return;e.preventDefault();el.value=t.trim();
+    if(autoSubmit)setTimeout(()=>doScan(el.value,mode),0);
+  });
+});
+(function(){
+  let buf="",last=0,timer=null;
+  const flush=()=>{const v=buf.trim();buf="";if(v.length<4)return;
+    const mode=routeScan(v);$$("nav button")[0].click();SCAN[mode].value=normalizeScan(v).token;doScan(v,mode)};
+  document.addEventListener("keydown",e=>{
+    const t=e.target;
+    if(/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)||t.isContentEditable)return;
+    const now=performance.now(),gap=now-last;last=now;
+    if(isTerm(e)&&buf){e.preventDefault();clearTimeout(timer);flush();return}
+    if(e.key.length!==1||e.ctrlKey||e.metaKey||e.altKey)return;
+    if(gap>250)buf="";
+    buf+=e.key;document.body.classList.add("scanning");
+    clearTimeout(timer);
+    timer=setTimeout(()=>{document.body.classList.remove("scanning");if(buf.length>=6)flush();else buf=""},260);
+  });
+})();
+$("#autoSubmit").addEventListener("change",e=>{autoSubmit=e.target.checked;
+  toast(autoSubmit?"Auto-submit on — scans fire as soon as the gun finishes":"Auto-submit off — press Enter or Run lookup")});
+function runLookup(){
+  const cert=SCAN.cert.value.trim(),ac=SCAN.ac.value.trim();
+  if(ac&&!cert)return doScan(ac,"ac");
+  if(cert)return doScan(cert,"cert");
+  toast("Enter a cert or an AC number first");
+}
+$("#runLookup").onclick=runLookup;
+$("#clearScan").onclick=()=>{SCAN.cert.value="";SCAN.ac.value="";renderResult(undefined);SCAN.cert.focus()};
+$$("[data-demo]").forEach(a=>a.onclick=e=>{e.preventDefault();doScan(a.dataset.value,a.dataset.demo)});
+document.addEventListener("keydown",e=>{
+  const inField=/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
+  if(e.key==="/"&&!inField){e.preventDefault();$$("nav button")[0].click();SCAN.cert.focus()}
+  if(e.key==="\\"&&!inField){e.preventDefault();$$("nav button")[0].click();SCAN.ac.focus()}
+  if(e.key==="Escape"){SCAN.cert.value="";SCAN.ac.value="";document.activeElement.blur&&document.activeElement.blur()}
+});
+
+function renderLog(){
+  const el=$("#logList");
+  if(!session.length){el.innerHTML='<div class="log-empty">No scans yet.<br>Scan a slab to start the session.</div>';return}
+  el.innerHTML=session.map((s,i)=>{
+    const o=s.hit?(s.hit.order||s.hit.card.order):null;
+    const state=s.pending?"querying…":s.error?"lookup failed":o?"order "+o.id+" · "+esc(o.customer):"no match";
+    return `<div class="log-item ${s.pending?"":s.hit?"":"bad"}" data-i="${i}">
+      <div class="l"><div class="code">${esc(s.raw)}</div>
+      <div class="sub2">${s.mode==="ac"?"arena":"pre-graded"} · ${state}</div></div>
+      <div class="sub2">${s.t.toLocaleTimeString([],{hour12:false}).slice(0,5)}</div></div>`}).join("");
+  el.querySelectorAll(".log-item").forEach(n=>n.onclick=()=>{
+    const s=session[+n.dataset.i];if(s.pending)return;renderResult(s.hit,s.raw);window.scrollTo({top:0,behavior:"smooth"})});
+}
+$("#logClear").onclick=()=>{session.length=0;renderLog();renderResult(undefined);toast("Session cleared")};
+$("#logCsv").onclick=()=>{
+  if(!session.length)return toast("Nothing to export");
+  csv([["scanned_at","input","matched","order_number","customer_name","user_email","cards_in_shipment","ship_date"]].concat(
+    session.map(s=>{const o=s.hit?(s.hit.order||s.hit.card.order):null;
+      return[s.t.toISOString(),s.raw,s.hit?"yes":"no",o?o.id:"",o?o.customer:"",o?o.email:"",o?o.cards.length:"",o?o.shipDateStr:""]})),
+    "cs-search-session.csv");
+};
+
+/* ============================================================
+   COMPLETION + HISTORY
+   ============================================================ */
+let workLog=[];
+const TEAM=["Anthony","Marisa"];
+const OUTCOMES=["Returned to sender","Reshipped to customer","Customer contacted","Re-vaulted","Address updated","Needs escalation","Damaged / claim filed"];
+let activeMember=localStorage.getItem("cs.member")||null;
+let histLive=true;
+OUTCOMES.forEach(o=>$("#hOutcome").insertAdjacentHTML("beforeend",`<option>${o}</option>`));
+
+/* server rows -> the shape the table renders */
+const hydrate=r=>({
+  id:r.id,at:new Date(r.completed_at),member:r.team_member,outcome:r.outcome,note:r.note||"",raw:r.scanned_input||"",
+  o:{id:r.order_number,customer:r.customer_name,username:r.username,email:r.user_email,
+     status:r.card_status,statusClass:statusClass(r.card_status),source:r.order_source,po:r.po_numbers,
+     createdStr:r.order_created_at,processedStr:r.order_processed_at,shipDateStr:r.ship_date||"—",
+     cards:new Array(r.cards_in_shipment||0)},
+  c:r.ac_number?{ac:r.ac_number,cert:r.cert_number,player:r.player_name,set:r.set_name,insert:r.insert_name,
+     parallel:r.parallel_name,parallelTotal:r.parallel_total,sport:r.sport,grade:r.grade,frontImg:r.front_slab_picture_url,
+     lifecycle:[{order:r.order_number,kind:r.order_kind||"retrieve",source:r.order_source,created:r.order_created_at,
+                 processed:r.order_processed_at,customer:r.customer_name,username:r.username,email:r.user_email,
+                 po:r.po_numbers,detail:r.order_detail,status:r.card_status}]}:null
+});
+async function loadHistory(){
+  try{
+    const d=await api("/api/history");
+    workLog=(d.entries||[]).map(hydrate);histLive=true;
+  }catch(e){
+    histLive=false;
+    console.warn("History API unavailable, staying local:",e.message);
+  }
+  renderHistory();
+}
+
+function wireDone(host,o,c,raw){
+  const pick2=host.querySelector("#whoPick"),sel=host.querySelector("#doneOutcome"),note=host.querySelector("#doneNote");
+  sel.innerHTML=OUTCOMES.map(x=>`<option>${x}</option>`).join("");
+  if(o.status==="return_to_sender")sel.value="Returned to sender";
+  pick2.querySelectorAll(".member").forEach(b=>{
+    if(b.dataset.member===activeMember)b.classList.add("on");
+    b.onclick=()=>{activeMember=b.dataset.member;
+      pick2.querySelectorAll(".member").forEach(x=>x.classList.toggle("on",x.dataset.member===activeMember))};
+  });
+  const go=async()=>{
+    if(!activeMember)return toast("Pick a team member first — Anthony or Marisa");
+    localStorage.setItem("cs.member",activeMember);
+    const r=retrieveRow(o,c);
+    const entry={at:new Date(),member:activeMember,outcome:sel.value,note:note.value.trim(),o,c,raw};
+    workLog.unshift(entry);renderHistory();
+    if(histLive){
+      try{
+        const saved=await api("/api/history",{method:"POST",body:JSON.stringify({
+          team_member:entry.member,outcome:entry.outcome,note:entry.note,scanned_input:String(raw||""),
+          order_number:o.id,order_kind:r.kind,order_source:r.source,order_detail:r.detail,
+          order_created_at:r.created,order_processed_at:r.processed,po_numbers:r.po,
+          customer_name:o.customer,username:o.username,user_email:o.email,
+          cards_in_shipment:o.cards.length,ship_date:o.shipDateStr,card_status:o.status,
+          ac_number:c?c.ac:null,cert_number:c?c.cert:null,player_name:c?c.player:null,set_name:c?c.set:null,
+          insert_name:c?c.insert:null,parallel_name:c?c.parallel:null,parallel_total:c?c.parallelTotal:null,
+          sport:c?c.sport:null,grade:c?c.grade:null,front_slab_picture_url:c?c.frontImg:null
+        })});
+        if(saved&&saved.id)entry.id=saved.id;
+      }catch(e){toast("Saved locally — history API error: "+e.message)}
+    }
+    toast(activeMember+" logged "+(c?"AC "+c.ac:"order "+o.id)+" as "+sel.value.toLowerCase());
+    renderResult(undefined);SCAN.cert.value="";SCAN.ac.value="";SCAN.cert.focus();
+  };
+  host.querySelector("#doneGo").onclick=go;
+  note.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go()}});
+}
+function histRows(){
+  const m=$("#hMember").value,oc=$("#hOutcome").value,q=$("#hSearch").value.trim().toLowerCase();
+  return workLog.filter(h=>{
+    if(m&&h.member!==m)return false;
+    if(oc&&h.outcome!==oc)return false;
+    if(q){const hay=[h.member,h.outcome,h.note,h.raw,h.o.id,h.o.customer,h.o.email,h.c?h.c.ac:"",h.c?h.c.cert:"",h.c?h.c.player:""].join(" ").toLowerCase();
+      if(!hay.includes(q))return false}
+    return true;
+  });
+}
+function renderHistory(){
+  $("#histCount").textContent=workLog.length?" "+workLog.length:"";
+  $("#hTotal").textContent=workLog.length;
+  TEAM.forEach(n=>{const el=$("#h"+n);if(el)el.textContent=workLog.filter(h=>h.member===n).length});
+  $("#hCards").textContent=new Set(workLog.filter(h=>h.c).map(h=>h.c.ac)).size;
+  $("#hOrders").textContent=new Set(workLog.map(h=>h.o.id)).size;
+  $("#hLast").textContent=workLog.length?workLog[0].member+" · "+workLog[0].at.toLocaleTimeString([],{hour12:false}).slice(0,5):"—";
+  const rows=histRows();
+  $("#hMeta").textContent=rows.length+" of "+workLog.length+" entries";
+  const b=$("#hBody");
+  if(!rows.length){b.innerHTML='<tr><td colspan="28" class="empty">'+(workLog.length?"Nothing matches those filters.":"No work logged yet. Finish an item on the Scan tab and it lands here.")+'</td></tr>';return}
+  b.innerHTML=rows.map(h=>{
+    const i=workLog.indexOf(h),o=h.o,c=h.c,r=retrieveRow(o,c);
+    return `<tr>
+      <td>${h.at.toLocaleTimeString([],{hour12:false}).slice(0,5)}</td>
+      <td>${chip(h.member,"c-green")}</td>
+      <td>${chip(h.outcome,h.outcome==="Returned to sender"?"c-red":/escalation|Damaged/.test(h.outcome)?"c-amber":"c-cyan")}</td>
+      <td>${esc(h.note)||dash}</td>
+      <td><a href="${orderUrl(o.id)}" target="_blank" rel="noopener">Click Me</a></td>
+      <td>${esc(o.username)}</td>
+      <td><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></td>
+      <td>${c?`<a href="${esc(c.frontImg)}" target="_blank" rel="noopener" title="${esc(c.frontImg)}">${slabIcon()}</a>`:dash}</td>
+      <td><a href="${orderUrl(o.id)}" target="_blank" rel="noopener">${o.id}</a></td>
+      <td>${c?c.cert:dash}</td><td>${c?c.ac:dash}</td><td>${c?esc(c.grade):dash}</td><td>${c?esc(c.set):dash}</td>
+      <td>${c?esc(c.player):dash}</td><td>${c?esc(c.insert):dash}</td><td>${c?esc(c.parallel):dash}</td>
+      <td>${c&&c.parallelTotal?esc(c.parallelTotal):dash}</td><td>${c?esc(c.sport):dash}</td>
+      <td>${esc(r.po)||dash}</td>
+      <td>${chip(r.kind,KIND_CLASS[r.kind]||"c-gray")}</td>
+      <td>${esc(r.created)}</td><td>${esc(r.processed)||dash}</td>
+      <td>${esc(o.customer)}</td><td>${esc(r.source)}</td><td>${esc(r.detail)||dash}</td>
+      <td>${o.cards.length}</td>
+      <td>${chip(o.status,o.statusClass)}</td>
+      <td><button class="btn sm" data-undo="${i}">UNDO</button></td></tr>`}).join("");
+  b.querySelectorAll("[data-undo]").forEach(x=>x.onclick=async()=>{
+    const i=+x.dataset.undo,e=workLog[i];
+    workLog.splice(i,1);renderHistory();
+    if(histLive&&e&&e.id){try{await api("/api/history?id="+encodeURIComponent(e.id),{method:"DELETE"})}
+      catch(err){toast("Removed locally — "+err.message)}}
+    toast("Entry removed");
+  });
+}
+["hMember","hOutcome","hSearch"].forEach(id=>{const el=document.getElementById(id);
+  el.addEventListener("input",renderHistory);el.addEventListener("change",renderHistory)});
+$("#hReset").onclick=()=>{$("#hMember").value="";$("#hOutcome").value="";$("#hSearch").value="";renderHistory()};
+$("#hClear").onclick=async()=>{
+  if(!confirm("Clear today's completed work log for everyone?"))return;
+  const ids=workLog.map(e=>e.id).filter(Boolean);
+  workLog=[];renderHistory();
+  if(histLive)for(const id of ids){try{await api("/api/history?id="+encodeURIComponent(id),{method:"DELETE"})}catch(e){}}
+  toast("History cleared");
+};
+$("#hCsv").onclick=()=>{
+  const rows=histRows();
+  if(!rows.length)return toast("Nothing to export");
+  csv([["completed_at","team_member","outcome","note","scanned_input","order_url","username","user_email",
+        "front_slab_picture_url","order_number","cert_number","ac_number","grade","set_name","player_name",
+        "insert","parallel_name","parallel_total","sport","po_numbers","order_kind","order_created_at",
+        "order_processed_at","customer_name","order_source","order_detail","cards_in_shipment","ship_date","card_status"]]
+    .concat(rows.map(h=>{const o=h.o,c=h.c,r=retrieveRow(o,c);
+      return[h.at.toISOString(),h.member,h.outcome,h.note,h.raw,orderUrl(o.id),o.username,o.email,
+        c?c.frontImg:"",o.id,c?c.cert:"",c?c.ac:"",c?c.grade:"",c?c.set:"",c?c.player:"",
+        c?c.insert:"",c?c.parallel:"",c?c.parallelTotal:"",c?c.sport:"",r.po,r.kind,r.created,
+        r.processed,o.customer,r.source,r.detail,o.cards.length,o.shipDateStr,o.status]})),
+    "cs-search-history-"+fmt(new Date())+".csv");
+};
+
+renderLog();renderResult(undefined);loadHistory();
+setTimeout(()=>SCAN.cert.focus(),120);
+</script>
+</body>
+</html>

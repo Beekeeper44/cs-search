@@ -1,0 +1,15 @@
+{
+  "name": "cs-search",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Arena Club CS Search — return-to-sender slab lookup against Metabase question 4093",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4"
+  }
+}
