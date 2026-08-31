@@ -68,12 +68,20 @@ underlying Snowflake database only**. This app never writes to Metabase.
 
 ## How the app talks to 4093
 
-**Variable types matter.** In 4093, `ac_number`, `cert_number` and `po_number`
-are declared **Number**; `sport`, `player_name`, `set_name`, `parallel_name`,
-`user_email` and `username` are **Text**. Metabase rejects a run whose parameter
-type does not match the declared variable type, so `lib/metabase.js` sends
-`number/=` for the numeric tags and `category` for the text ones. If you change
-a variable's type in Metabase, update `NUMBER_TAGS` in that file.
+**Parameters are built from the question itself.** On the first call of a cold
+start, `lib/metabase.js` reads `GET /api/card/4093` and pulls
+`dataset_query.native.template-tags`, which gives each variable's internal `id`
+and declared type. Both are required:
+
+- Metabase rejects any parameter object without the tag's `id` —
+  `{"specific-errors":{"parameters":[{"id":["missing required key"]}]}}`.
+- The parameter type must match the declared type. In 4093 `ac_number`,
+  `cert_number` and `po_number` are **Number** (sent as `number/=` with a numeric
+  value); the rest are **Text** (sent as `category`).
+
+Because the types are read from the question rather than hardcoded, changing a
+variable from Number to Text in Metabase needs no code change — just a redeploy
+to clear the cached tag map.
 
 Because the tags are numeric, scanner input is reduced to digits before it is
 sent: `8AC0001234`, `8 AC 1234`, `AC-1234` and `1234` all become `1234`;
