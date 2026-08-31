@@ -349,6 +349,7 @@ const chip=(t,c)=>`<span class="chip ${c}">${esc(t)}</span>`;
    so links always come from the row, never from the number we display. */
 const orderLink=(url,label)=>url?`<a href="${url}" target="_blank" rel="noopener">${esc(label)}</a>`:esc(label);
 const dash="—";
+const fmt=d=>d?new Date(d).toISOString().slice(0,10):"";
 const slabIcon=()=>'<svg width="20" height="26" viewBox="0 0 20 26" style="vertical-align:middle"><rect x="1" y="1" width="18" height="24" rx="2" fill="#101a14" stroke="#39FF14" stroke-width="1.5"/><rect x="4" y="4" width="12" height="4" fill="#39FF14" opacity=".5"/><rect x="4" y="10" width="12" height="12" fill="#2a3a30"/></svg>';
 /* the retrieve row of a card's life-cycle — the one CS acts on */
 function retrieveRow(o,c){
@@ -441,7 +442,7 @@ function renderResult(hit,raw){
       Re-scan the slab label, or check the cert on PSA's site. A card with no AC number was never vaulted here.</div></div></div>`;
     return;
   }
-  const o=hit.order||hit.card.order,c=hit.card,age=daysAgo(o.shipDate);
+  const o=hit.order||hit.card.order,c=hit.card;
   host.innerHTML=`
   <div class="result">
     <div class="res-hero">
@@ -562,7 +563,15 @@ async function doScan(raw,mode){
   entry.pending=false;entry.hit=hit;entry.error=err;
   renderLog();
   if(err){renderError(err,entry.raw);return}
-  renderResult(hit,entry.raw);
+  try{
+    renderResult(hit,entry.raw);
+  }catch(e){
+    console.error("render failed",e);
+    $("#resultHost").innerHTML=`<div class="result miss"><div class="miss-box">
+      <div class="big">RENDER ERROR</div>
+      <div class="p">The lookup succeeded but the result could not be drawn.<br>${esc(e.message)}</div></div></div>`;
+    return;
+  }
   if(!hit)toast("No match for "+entry.raw);
   else if(m==="cert"&&hit.how==="8AC barcode")toast("Matched on AC number — that is an Arena slab");
   else if(m==="ac"&&hit.how==="PSA cert")toast("Matched on cert number — that is a pre-graded slab");
