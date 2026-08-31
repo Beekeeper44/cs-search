@@ -12,5 +12,3 @@ export default function handler(req, res) {
     team: (process.env.TEAM_MEMBERS || 'Anthony,Marisa').split(','),
   });
 }
- 
- 

@@ -19,6 +19,8 @@ async function ensureTable() {
         note                   TEXT,
         scanned_input          TEXT,
         order_number           TEXT,
+        order_url              TEXT,
+        order_status           TEXT,
         order_kind             TEXT,
         order_source           TEXT,
         order_detail           TEXT,
@@ -80,7 +82,7 @@ export default async function handler(req, res) {
       const [row] = await sql`
         INSERT INTO cs_search_history (
           team_member, outcome, note, scanned_input,
-          order_number, order_kind, order_source, order_detail,
+          order_number, order_url, order_status, order_kind, order_source, order_detail,
           order_created_at, order_processed_at, po_numbers,
           customer_name, username, user_email,
           cards_in_shipment, ship_date, card_status,
@@ -88,7 +90,8 @@ export default async function handler(req, res) {
           parallel_name, parallel_total, sport, grade, front_slab_picture_url
         ) VALUES (
           ${b.team_member}, ${b.outcome}, ${b.note || null}, ${b.scanned_input || null},
-          ${b.order_number || null}, ${b.order_kind || null}, ${b.order_source || null}, ${b.order_detail || null},
+          ${b.order_number || null}, ${b.order_url || null}, ${b.order_status || null},
+          ${b.order_kind || null}, ${b.order_source || null}, ${b.order_detail || null},
           ${b.order_created_at || null}, ${b.order_processed_at || null}, ${b.po_numbers || null},
           ${b.customer_name || null}, ${b.username || null}, ${b.user_email || null},
           ${b.cards_in_shipment || 0}, ${b.ship_date || null}, ${b.card_status || null},

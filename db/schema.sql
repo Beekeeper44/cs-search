@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS cs_search_history (
   note                   TEXT,
   scanned_input          TEXT,
   order_number           TEXT,
+  order_url              TEXT,
+  order_status           TEXT,
   order_kind             TEXT,
   order_source           TEXT,
   order_detail           TEXT,

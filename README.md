@@ -66,31 +66,77 @@ underlying Snowflake database only**. This app never writes to Metabase.
 
 ---
 
-## Two things to check on question 4093
+## How the app talks to 4093
 
-1. **`ac_number` and `cert_number` must be text template tags** —
-   `[[ AND c.number::text = {{ac_number}} ]]`. They already are. The API passes
-   one at a time and leaves the other unset, so the optional clause is skipped.
+**Variable types matter.** In 4093, `ac_number`, `cert_number` and `po_number`
+are declared **Number**; `sport`, `player_name`, `set_name`, `parallel_name`,
+`user_email` and `username` are **Text**. Metabase rejects a run whose parameter
+type does not match the declared variable type, so `lib/metabase.js` sends
+`number/=` for the numeric tags and `category` for the text ones. If you change
+a variable's type in Metabase, update `NUMBER_TAGS` in that file.
 
-2. **Scanner input is normalised before it is sent.** `8AC0001234`, `8 AC 1234`,
-   `AC-1234` and `1234` all become `1234`; `PSA 79067707` and `CERT-79067707`
-   become `79067707`. Leading zeros are stripped. If the warehouse stores AC
-   numbers *with* zero padding, drop the `.replace(/^0+/, '')` in
-   `api/lookup.js`.
+Because the tags are numeric, scanner input is reduced to digits before it is
+sent: `8AC0001234`, `8 AC 1234`, `AC-1234` and `1234` all become `1234`;
+`PSA 79067707` and `CERT-79067707` become `79067707`. Leading zeros are stripped,
+which is required — `{{ac_number}}` is a number, and the SQL casts it back with
+`c.number::text = {{ac_number}}::text`.
+
+**Never build an order link from `order_number`.** The query returns
+`order_url` as `'https://admin.arenaclub.com/orders/' || o.id` — the internal
+id — while `order_number` is `o.number`. They are different values, so a link
+built from the number would 404. The app only ever uses the `order_url` the
+query returns. Repack, auction and purchase rows return `NULL` there (no admin
+order page exists for them), so those order numbers render as plain text.
+
+**Two statuses, two meanings.** `card_status` is `admin.cards.status` — the
+grading pipeline. `order_status` is `admin.orders.status` — the shipping side.
+Both are shown; the hero chip uses `card_status` and the fields show
+`order_status` next to it.
+
+**Four order sources feed the life-cycle.** `order` (submit/retrieve/vault),
+`slab_pack (repack)`, `auction` and `purchase` are UNIONed, so a card can appear
+in all four. Only `order_kind = 'retrieve'` is the shipment CS acts on.
 
 ### Shipment contents (optional)
 
 Question 4093 filters by card, so it cannot answer "what else was in this box".
-To fill the **Cards in this shipment** table, save a second question that takes
-`{{order_number}}` and returns the same columns for every card on that order,
-then set `ORDER_QUESTION_ID`. Without it that one table shows a note; everything
-else works.
+To fill the **Cards in this shipment** table, save a second question taking a
+**Number** variable named `order_number`, then set `ORDER_QUESTION_ID`:
+
+```sql
+SELECT
+  c.number     AS ac_number,
+  cc.cert_number,
+  c.player_name, c.set_name, c."INSERT" AS "INSERT",
+  c.parallel_name, c.sport,
+  (c.grading_company || ' ' || c.overall) AS grade
+FROM (SELECT * FROM APP_PROD.PUBLIC.ORDERS
+      WHERE NOT COALESCE(_SNOWFLAKE_DELETED, FALSE)) o
+JOIN (SELECT * FROM APP_PROD.PUBLIC.ORDER_ITEMS
+      WHERE NOT COALESCE(_SNOWFLAKE_DELETED, FALSE)) oi ON oi.order_id = o.id
+JOIN (SELECT * FROM APP_PROD.ADMIN.CARDS
+      WHERE NOT COALESCE(_SNOWFLAKE_DELETED, FALSE)) c  ON c.id = oi.card_id
+LEFT JOIN (SELECT * FROM APP_PROD.ADMIN.CARD_CERT_NUMBER
+      WHERE NOT COALESCE(_SNOWFLAKE_DELETED, FALSE)) cc ON cc.card_id = c.id
+WHERE o.number::text = {{order_number}}::text
+ORDER BY c.number;
+```
+
+Without it that one table shows a note; everything else works.
 
 ### Ship date
 
-4093 has no carrier feed, so `order_processed_at` is used as the ship signal.
-Wire in the real ship date and tracking later by adding those columns to the
-question — `lib/normalize.js` reads them by name and needs no other change.
+4093 exposes `order_processed_at` (from `admin.orders.processed_at`) but no
+carrier or tracking columns, so processed_at stands in as the ship signal. Add
+real ship date and tracking to the question later and `lib/normalize.js` will
+pick them up by name with no other change.
+
+### Timezones
+
+The query already converts to `America/Los_Angeles` — naive UTC columns via
+`CONVERT_TIMEZONE`, and repack `created_at` is left alone because it is already
+LA wall-time. The app displays those strings verbatim and does no further
+conversion, so nothing shifts by 7 hours.
 
 ---
 

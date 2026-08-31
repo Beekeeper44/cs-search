@@ -3,7 +3,6 @@ import { buildResult, buildShipment } from '../lib/normalize.js';
 
 const CARDS_Q = process.env.CARDS_QUESTION_ID || '4093';
 const ORDER_Q = process.env.ORDER_QUESTION_ID || '';
-const ADMIN_BASE = (process.env.ADMIN_ORDER_BASE_URL || '').replace(/\/+$/, '');
 
 // scanners send padded values; the warehouse stores them bare
 const clean = (v) =>
@@ -42,8 +41,9 @@ export default async function handler(req, res) {
     for (const field of order) {
       const value = field === 'ac' ? ac || cert : cert || ac;
       if (!value) continue;
+      // both tags are declared Number in 4093, so send them as numbers
       rows = await runQuestion(CARDS_Q, {
-        [field === 'ac' ? 'ac_number' : 'cert_number']: value,
+        [field === 'ac' ? 'ac_number' : 'cert_number']: { value, type: 'number' },
       });
       if (rows.length) {
         matchedOn = field === 'ac' ? '8AC barcode' : 'PSA cert';
@@ -53,14 +53,14 @@ export default async function handler(req, res) {
 
     if (!rows.length) return res.status(200).json({ found: false });
 
-    const result = buildResult(rows, { adminBase: ADMIN_BASE });
+    const result = buildResult(rows);
     result.matchedOn = matchedOn;
 
     // shipment contents need an order-wide query; optional
     result.shipment = [];
     if (ORDER_Q && result.retrieval?.id) {
       try {
-        const orderRows = await runQuestion(ORDER_Q, { order_number: result.retrieval.id });
+        const orderRows = await runQuestion(ORDER_Q, { order_number: { value: result.retrieval.id, type: 'number' } });
         result.shipment = buildShipment(orderRows);
       } catch (e) {
         console.warn('shipment query failed:', e.message);
