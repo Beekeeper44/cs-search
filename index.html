@@ -370,9 +370,10 @@ function csv(rows,name){
 $("#hRows").textContent="question 4093";
 /* say plainly whether the Metabase connection is actually wired up */
 api("/api/health").then(h=>{
-  $("#hRows").textContent="question "+(h.cards_question_id||"4093")+(h.metabase?" · connected":" · not configured");
-  if(!h.metabase)toast("Metabase env vars are missing — see /api/health");
-}).catch(()=>{$("#hRows").textContent="question 4093 · api unreachable"});
+  const qid=(h.vars&&h.vars.CARDS_QUESTION_ID||"4093").split(" ")[0];
+  $("#hRows").textContent="question "+qid+(h.metabase?" · connected":" · not configured");
+  if(!h.metabase)toast("Metabase env vars are missing — scan anything to see which");
+}).catch(()=>{$("#hRows").textContent="api unreachable"});
 setInterval(()=>{$("#hClock").textContent=new Date().toLocaleTimeString([],{hour12:false})},1000);
 
 $$("nav button").forEach(b=>b.onclick=()=>{
@@ -571,15 +572,40 @@ function renderLoading(raw){
     <div class="big">${esc(raw)}</div><div class="p">Running question 4093…</div></div>`;
 }
 function renderError(err,raw){
-  const cfg=err.status===503;
-  $("#resultHost").innerHTML=`<div class="result miss"><div class="miss-box">
-    <div class="big">${cfg?"NOT CONFIGURED":"LOOKUP FAILED"}</div>
-    <div class="p">${cfg
-      ?"Set METABASE_URL, METABASE_API_KEY and CARDS_QUESTION_ID in the Vercel project, then redeploy."
-      :"Metabase did not answer for <b>"+esc(raw)+"</b>. "+esc(err.message||"")+" — try again, or check the question in Metabase."}</div>
-  </div></div>`;
+  const host=$("#resultHost");
+  if(err.status!==503){
+    host.innerHTML=`<div class="result miss"><div class="miss-box"><div class="big">LOOKUP FAILED</div>
+      <div class="p">Metabase did not answer for <b>${esc(raw)}</b>.<br>${esc(err.message||"")}</div></div></div>`;
+    return;
+  }
+  // 503 means the function ran but env vars are missing — say exactly which
+  host.innerHTML=`<div class="result miss"><div class="miss-box"><div class="big">NOT CONFIGURED</div>
+    <div class="p">Checking which variables the deployment can see…</div></div></div>`;
+  api("/api/health").then(h=>{
+    const v=h.vars||{};
+    const rows=Object.entries(v).map(([k,val])=>{
+      const bad=String(val).startsWith("MISSING");
+      return `<tr><td>${esc(k)}</td><td style="color:${bad?"var(--red)":"var(--green)"}">${esc(val)}</td></tr>`;
+    }).join("");
+    const warn=(h.warnings||[]).map(w=>`<div style="color:var(--amber)">⚠ ${esc(w)}</div>`).join("");
+    host.innerHTML=`<div class="result miss">
+      <div class="miss-box"><div class="big">NOT CONFIGURED</div>
+        <div class="p">The function is running, but Metabase credentials are missing.
+        Set the red variables in Vercel → Settings → Environment Variables, tick <b>Production</b>,
+        then <b>redeploy</b> — env vars only reach a deployment built after they were added.</div>
+        ${warn?`<div class="p">${warn}</div>`:""}
+      </div>
+      <div class="sec" style="margin:0;border:none;border-radius:0">
+        <div class="sec-h"><span class="tag">DEPLOYMENT CONFIG</span>
+          <span class="meta">${esc(h.deployment?.env||"local")}${h.deployment?.commit?" · "+esc(h.deployment.commit):""} · build ${esc(h.build||"?")}</span></div>
+        <div class="tw"><table><thead><tr><th>VARIABLE</th><th>STATE</th></tr></thead><tbody>${rows}</tbody></table></div>
+      </div></div>`;
+  }).catch(e=>{
+    host.innerHTML=`<div class="result miss"><div class="miss-box"><div class="big">NOT CONFIGURED</div>
+      <div class="p">Metabase credentials are missing, and /api/health is unreachable (${esc(e.message)}).
+      Check that the deployment finished and that api/ files were included.</div></div></div>`;
+  });
 }
-
 Object.entries(SCAN).forEach(([mode,el])=>{
   let last=0,fast=0,timer=null;
   el.addEventListener("keydown",e=>{

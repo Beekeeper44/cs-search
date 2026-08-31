@@ -48,8 +48,8 @@ Set in Vercel → Project → Settings → Environment Variables.
 
 | Variable | Required | Notes |
 |---|---|---|
-| `METABASE_URL` | yes | `https://arena-club.metabaseapp.com`, no trailing slash |
-| `METABASE_API_KEY` | yes | Metabase → Admin → Settings → Authentication → API keys |
+| `METABASE_URL` *or* `METABASE_HOST` | yes | `https://arena-club.metabaseapp.com`. Either name works — other Arena Club projects use `METABASE_HOST`. A bare hostname gets `https://` added and a trailing slash is dropped. |
+| `METABASE_API_KEY` *or* `METABASE_KEY` | yes | Metabase → Admin → Settings → Authentication → API keys. Whitespace is trimmed. |
 | `CARDS_QUESTION_ID` | yes | `4093` |
 | `ORDER_QUESTION_ID` | no | Question taking `{{order_number}}`, returns every card on an order |
 | `DATABASE_URL` | no | Neon Postgres for the History log |
