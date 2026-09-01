@@ -105,32 +105,22 @@ Both are shown; the hero chip uses `card_status` and the fields show
 `slab_pack (repack)`, `auction` and `purchase` are UNIONed, so a card can appear
 in all four. Only `order_kind = 'retrieve'` is the shipment CS acts on.
 
-### Shipment contents (optional)
+### Shipment contents — "what else was in the box"
 
-Question 4093 filters by card, so it cannot answer "what else was in this box".
-To fill the **Cards in this shipment** table, save a second question taking a
-**Number** variable named `order_number`, then set `ORDER_QUESTION_ID`:
+Question 4093 filters by card, so it cannot list an order's contents. To fill
+the **Cards in this shipment** table:
 
-```sql
-SELECT
-  c.number     AS ac_number,
-  cc.cert_number,
-  c.player_name, c.set_name, c."INSERT" AS "INSERT",
-  c.parallel_name, c.sport,
-  (c.grading_company || ' ' || c.overall) AS grade
-FROM (SELECT * FROM APP_PROD.PUBLIC.ORDERS
-      WHERE NOT COALESCE(_SNOWFLAKE_DELETED, FALSE)) o
-JOIN (SELECT * FROM APP_PROD.PUBLIC.ORDER_ITEMS
-      WHERE NOT COALESCE(_SNOWFLAKE_DELETED, FALSE)) oi ON oi.order_id = o.id
-JOIN (SELECT * FROM APP_PROD.ADMIN.CARDS
-      WHERE NOT COALESCE(_SNOWFLAKE_DELETED, FALSE)) c  ON c.id = oi.card_id
-LEFT JOIN (SELECT * FROM APP_PROD.ADMIN.CARD_CERT_NUMBER
-      WHERE NOT COALESCE(_SNOWFLAKE_DELETED, FALSE)) cc ON cc.card_id = c.id
-WHERE o.number::text = {{order_number}}::text
-ORDER BY c.number;
-```
+1. In Metabase, create a new SQL question against Snowflake and paste
+   `db/order-question.sql`.
+2. Add one variable named **`order_number`**, type **Number**.
+3. Save it, note the question id from its URL.
+4. Set `ORDER_QUESTION_ID` to that id in Vercel and redeploy.
 
-Without it that one table shows a note; everything else works.
+The SQL selects the same column names 4093 uses, so the app parses both with the
+same code. Repack and purchase orders have no `public.orders` row, so the table
+stays empty for those — expected, not an error.
+
+Without this, everything else works; that one table shows a note instead.
 
 ### Ship date
 
@@ -208,6 +198,7 @@ api/health.js       config check
 lib/metabase.js     Metabase client, API key stays server-side
 lib/normalize.js    4093 rows -> card + retrieval order, picks the retrieve row
 db/schema.sql       history table
+db/order-question.sql  optional Metabase question for shipment contents
 ```
 
 No bundler and no framework — `index.html` is served as a static asset and the

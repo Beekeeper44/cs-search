@@ -54,6 +54,6 @@ export default async function handler(req, res) {
       url: process.env.VERCEL_URL || null,
       commit: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || null,
     },
-    build: '2026-08-31g',
+    build: '2026-08-31h',
   });
 }

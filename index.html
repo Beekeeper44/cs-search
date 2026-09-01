@@ -350,6 +350,16 @@ const chip=(t,c)=>`<span class="chip ${c}">${esc(t)}</span>`;
 const orderLink=(url,label)=>url?`<a href="${url}" target="_blank" rel="noopener">${esc(label)}</a>`:esc(label);
 const dash="—";
 const fmt=d=>d?new Date(d).toISOString().slice(0,10):"";
+/* "2026-08-30T00:11:28.209" -> "Aug 30, 2026, 12:11 AM".
+   The SQL already converted to America/Los_Angeles, so this only reformats
+   the wall-clock string — it never shifts the time. */
+function stamp(v){
+  if(!v||v==="—")return "—";
+  const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if(!m)return String(v);
+  const d=new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]);
+  return isNaN(d)?String(v):d.toLocaleString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"numeric",minute:"2-digit"});
+}
 const slabIcon=()=>'<svg width="20" height="26" viewBox="0 0 20 26" style="vertical-align:middle"><rect x="1" y="1" width="18" height="24" rx="2" fill="#101a14" stroke="#39FF14" stroke-width="1.5"/><rect x="4" y="4" width="12" height="4" fill="#39FF14" opacity=".5"/><rect x="4" y="10" width="12" height="12" fill="#2a3a30"/></svg>';
 /* the retrieve row of a card's life-cycle — the one CS acts on */
 function retrieveRow(o,c){
@@ -475,8 +485,8 @@ function renderResult(hit,raw){
       <div class="fld"><div class="k">USER EMAIL</div><div class="v">${esc(o.email)}<button class="copy" data-copy="${esc(o.email)}">copy</button></div></div>
       <div class="fld"><div class="k">USERNAME</div><div class="v">${esc(o.username)||dash}</div></div>
       <div class="fld"><div class="k">CARDS IN SHIPMENT</div><div class="v big">${o.cards.length||dash}</div></div>
-      <div class="fld"><div class="k">SHIP DATE</div><div class="v big">${esc(o.shipDateStr)||dash}</div><div style="font-size:14px;color:#fff">${o.processedStr&&o.processedStr!=="—"?"order processed":"not processed yet"}</div></div>
-      <div class="fld"><div class="k">ORDER CREATED</div><div class="v" style="font-size:17px">${esc(o.createdStr)}</div></div>
+      <div class="fld"><div class="k">SHIP DATE</div><div class="v big">${esc(o.shipDateStr)||"not shipped"}</div><div style="font-size:14px;color:#fff">${o.processedStr&&o.processedStr!=="—"?"processed "+esc(stamp(o.processedStr)):"order_processed_at is empty"}</div></div>
+      <div class="fld"><div class="k">ORDER CREATED</div><div class="v" style="font-size:17px">${esc(stamp(o.createdStr))}</div></div>
       <div class="fld"><div class="k">ORDER SOURCE</div><div class="v" style="font-size:17px">${esc(o.source)||dash}</div></div>
       <div class="fld"><div class="k">ORDER STATUS</div><div class="v" style="font-size:17px">${o.orderStatus?chip(o.orderStatus,statusClass(o.orderStatus)):dash}</div></div>
       <div class="fld"><div class="k">PO NUMBERS</div><div class="v" style="font-size:17px">${esc(o.po)||dash}</div></div>
@@ -485,7 +495,7 @@ function renderResult(hit,raw){
       <button class="btn primary" data-act="copysum">COPY CS SUMMARY</button>
       <button class="btn" data-act="email">EMAIL CUSTOMER</button>
       ${o.orderUrl?`<a class="btn" href="${o.orderUrl}" target="_blank" rel="noopener">OPEN ORDER</a>`:""}
-      <button class="btn" data-act="drawer">VIEW ALL ${o.cards.length} CARDS</button>
+      ${o.cards.length?`<button class="btn" data-act="drawer">VIEW ALL ${o.cards.length} CARDS</button>`:""}
     </div>
     ${c?lifecycleTable(c):""}
     ${orderCardsTable(o,c)}
@@ -493,7 +503,8 @@ function renderResult(hit,raw){
   host.querySelectorAll(".copy").forEach(b=>b.onclick=()=>copy(b.dataset.copy));
   host.querySelector('[data-act="copysum"]').onclick=()=>copy(summary(o,c));
   host.querySelector('[data-act="email"]').onclick=()=>{location.href="mailto:"+o.email+"?subject="+encodeURIComponent("Arena Club retrieval order "+o.id)};
-  host.querySelector('[data-act="drawer"]').onclick=()=>{
+  const viewBtn=host.querySelector('[data-act="drawer"]');
+  if(viewBtn)viewBtn.onclick=()=>{
     const t=host.querySelector("#shipTable");
     if(!t)return;
     t.scrollIntoView({behavior:"smooth",block:"start"});
@@ -512,7 +523,7 @@ function lifecycleTable(c){
     ${c.lifecycle.map(r=>`<tr class="${r.kind==="retrieve"?"hit":""}">
       <td>${orderLink(r.url,r.order)}</td>
       <td>${chip(r.kind,KIND_CLASS[r.kind]||"c-gray")}</td>
-      <td>${esc(r.source)}</td><td>${esc(r.created)}</td><td>${esc(r.processed)||dash}</td>
+      <td>${esc(r.source)}</td><td>${esc(stamp(r.created))}</td><td>${esc(stamp(r.processed))}</td>
       <td>${esc(r.customer)}</td><td>${esc(r.username)}</td><td>${esc(r.email)}</td>
       <td>${esc(r.po)||dash}</td><td>${esc(r.detail)||dash}</td>
       <td>${chip(r.status,statusClass(r.status))}</td></tr>`).join("")}
@@ -521,7 +532,9 @@ function lifecycleTable(c){
 function orderCardsTable(o,hit){
   if(!o.cards||!o.cards.length)return `<div class="sec" id="shipTable" style="margin:0;border:none;border-radius:0">
     <div class="sec-h"><span class="tag">CARDS IN THIS SHIPMENT</span><span class="meta">order ${o.id}</span></div>
-    <div class="empty">Shipment contents need an order_number filter on the question.<br>See ORDER_QUESTION_ID in the README.</div></div>`;
+    <div class="empty">Not loaded — question 4093 filters by card, so it can't list an order's contents.<br>
+    Save <b>db/order-question.sql</b> as a Metabase question with a Number variable named <b>order_number</b>,
+    then set <b>ORDER_QUESTION_ID</b> in Vercel.</div></div>`;
   return `<div class="sec" id="shipTable" style="margin:0;border:none;border-radius:0">
     <div class="sec-h"><span class="tag">CARDS IN THIS SHIPMENT</span><span class="meta">${o.cards.length} card${o.cards.length>1?"s":""} · order ${o.id}</span></div>
     <div class="tw" style="max-height:300px"><table><thead><tr>
@@ -798,7 +811,7 @@ function renderHistory(){
       <td>${c&&c.parallelTotal?esc(c.parallelTotal):dash}</td><td>${c?esc(c.sport):dash}</td>
       <td>${esc(r.po)||dash}</td>
       <td>${chip(r.kind,KIND_CLASS[r.kind]||"c-gray")}</td>
-      <td>${esc(r.created)}</td><td>${esc(r.processed)||dash}</td>
+      <td>${esc(stamp(r.created))}</td><td>${esc(stamp(r.processed))}</td>
       <td>${esc(o.customer)}</td><td>${esc(r.source)}</td><td>${esc(r.detail)||dash}</td>
       <td>${o.cards.length}</td>
       <td>${chip(o.status,o.statusClass)}</td>
