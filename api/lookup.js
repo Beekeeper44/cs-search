@@ -1,8 +1,7 @@
 import { runQuestion, isConfigured } from '../lib/metabase.js';
-import { buildResult, buildShipment } from '../lib/normalize.js';
+import { buildResult } from '../lib/normalize.js';
 
 const CARDS_Q = process.env.CARDS_QUESTION_ID || '4093';
-const ORDER_Q = process.env.ORDER_QUESTION_ID || '';
 
 // scanners send padded values; the warehouse stores them bare
 const clean = (v) =>
@@ -56,16 +55,10 @@ export default async function handler(req, res) {
     const result = buildResult(rows);
     result.matchedOn = matchedOn;
 
-    // shipment contents need an order-wide query; optional
+    // Shipment contents are fetched separately by the client (/api/shipment):
+    // filtering 4093 by order alone is much heavier than a card lookup, and the
+    // retrieval order should render immediately rather than wait on it.
     result.shipment = [];
-    if (ORDER_Q && result.retrieval?.id) {
-      try {
-        const orderRows = await runQuestion(ORDER_Q, { order_number: { value: result.retrieval.id, type: 'number' } });
-        result.shipment = buildShipment(orderRows);
-      } catch (e) {
-        console.warn('shipment query failed:', e.message);
-      }
-    }
 
     return res.status(200).json(result);
   } catch (e) {

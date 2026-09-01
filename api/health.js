@@ -30,11 +30,12 @@ export default async function handler(req, res) {
     ok: true,
     ...(tags ? { tags } : {}),
     metabase: isConfigured(),
+    shipment: Boolean(process.env.ORDER_QUESTION_ID),
     vars: {
       'METABASE_URL / METABASE_HOST': url ? `set via ${urlVar} -> ${url}` : 'MISSING (set either name)',
       METABASE_API_KEY: key ? `set (${key.length} chars, starts "${key.slice(0, 3)}")` : 'MISSING',
       CARDS_QUESTION_ID: process.env.CARDS_QUESTION_ID || '4093 (default)',
-      ORDER_QUESTION_ID: process.env.ORDER_QUESTION_ID || 'not set (shipment table hidden)',
+      ORDER_QUESTION_ID: process.env.ORDER_QUESTION_ID || 'not set — shipment section hidden',
       DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'not set (history stays in-browser)',
       TEAM_MEMBERS: process.env.TEAM_MEMBERS || 'Anthony,Marisa (default)',
     },
@@ -54,6 +55,6 @@ export default async function handler(req, res) {
       url: process.env.VERCEL_URL || null,
       commit: (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || null,
     },
-    build: '2026-08-31h',
+    build: '2026-09-01b',
   });
 }

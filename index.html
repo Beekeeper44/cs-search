@@ -381,6 +381,7 @@ function csv(rows,name){
 $("#hRows").textContent="question 4093";
 /* say plainly whether the Metabase connection is actually wired up */
 api("/api/health").then(h=>{
+  SHIPMENT_ON=Boolean(h.shipment);
   const qid=(h.vars&&h.vars.CARDS_QUESTION_ID||"4093").split(" ")[0];
   $("#hRows").textContent="question "+qid+(h.metabase?" · connected":" · not configured");
   if(!h.metabase)toast("Metabase env vars are missing — scan anything to see which");
@@ -484,7 +485,7 @@ function renderResult(hit,raw){
       <div class="fld"><div class="k">CUSTOMER NAME</div><div class="v">${esc(o.customer)}<button class="copy" data-copy="${esc(o.customer)}">copy</button></div></div>
       <div class="fld"><div class="k">USER EMAIL</div><div class="v">${esc(o.email)}<button class="copy" data-copy="${esc(o.email)}">copy</button></div></div>
       <div class="fld"><div class="k">USERNAME</div><div class="v">${esc(o.username)||dash}</div></div>
-      <div class="fld"><div class="k">CARDS IN SHIPMENT</div><div class="v big">${o.cards.length||dash}</div></div>
+      ${SHIPMENT_ON?`<div class="fld"><div class="k">CARDS IN SHIPMENT</div><div class="v big" id="cardsInShipment">${o.cards.length||"…"}</div></div>`:""}
       <div class="fld"><div class="k">SHIP DATE</div><div class="v big">${esc(o.shipDateStr)||"not shipped"}</div><div style="font-size:14px;color:#fff">${o.processedStr&&o.processedStr!=="—"?"processed "+esc(stamp(o.processedStr)):"order_processed_at is empty"}</div></div>
       <div class="fld"><div class="k">ORDER CREATED</div><div class="v" style="font-size:17px">${esc(stamp(o.createdStr))}</div></div>
       <div class="fld"><div class="k">ORDER SOURCE</div><div class="v" style="font-size:17px">${esc(o.source)||dash}</div></div>
@@ -495,10 +496,10 @@ function renderResult(hit,raw){
       <button class="btn primary" data-act="copysum">COPY CS SUMMARY</button>
       <button class="btn" data-act="email">EMAIL CUSTOMER</button>
       ${o.orderUrl?`<a class="btn" href="${o.orderUrl}" target="_blank" rel="noopener">OPEN ORDER</a>`:""}
-      ${o.cards.length?`<button class="btn" data-act="drawer">VIEW ALL ${o.cards.length} CARDS</button>`:""}
+      ${SHIPMENT_ON?`<button class="btn" data-act="drawer">${o.cards.length?"VIEW ALL "+o.cards.length+" CARDS":"VIEW SHIPMENT"}</button>`:""}
     </div>
     ${c?lifecycleTable(c):""}
-    ${orderCardsTable(o,c)}
+    ${SHIPMENT_ON?orderCardsTable(o,c):""}
   </div>`;
   host.querySelectorAll(".copy").forEach(b=>b.onclick=()=>copy(b.dataset.copy));
   host.querySelector('[data-act="copysum"]').onclick=()=>copy(summary(o,c));
@@ -511,6 +512,45 @@ function renderResult(hit,raw){
     t.classList.add("flash");setTimeout(()=>t.classList.remove("flash"),1200);
   };
   wireDone(host,o,c,raw);
+  if(SHIPMENT_ON&&(!o.cards||!o.cards.length))loadShipment(o,c);
+}
+
+/* Fetched after the result renders — the order-wide query is heavy, and the
+   retrieval order is the answer CS needs first. */
+async function loadShipment(o,c){
+  const meta=$("#shipMeta"),body=$("#shipBody");
+  if(!meta||!body)return;
+  try{
+    const d=await api("/api/shipment?order="+encodeURIComponent(o.id));
+    const cards=d.cards||[];
+    o.cards=cards;
+    if(!cards.length){
+      meta.textContent="order "+o.id+" · no cards found";
+      body.innerHTML="No other cards are linked to this order. Repack and purchase orders have no <b>public.orders</b> row, so this is expected for those.";
+      return;
+    }
+    meta.textContent=cards.length+" card"+(cards.length>1?"s":"")+" · order "+o.id;
+    body.outerHTML=`<div class="tw" style="max-height:300px"><table><thead><tr>
+      <th>SLOT</th><th>AC NUMBER</th><th>CERT NUMBER</th><th>PLAYER NAME</th><th>SET NAME</th>
+      <th>INSERT</th><th>PARALLEL NAME</th><th>GRADE</th><th>SPORT</th>
+    </tr></thead><tbody>
+    ${cards.map(x=>`<tr class="${c&&String(x.ac)===String(c.ac)?"hit":""}">
+      <td>${x.slot}</td><td>${esc(x.ac)}</td><td>${esc(x.cert)}</td><td>${esc(x.player)}</td>
+      <td>${esc(x.set)}</td><td>${esc(x.insert)}</td><td>${esc(x.parallel)}</td>
+      <td>${esc(x.grade)}</td><td>${esc(x.sport)}</td></tr>`).join("")}
+    </tbody></table></div>`;
+    // the count is part of the result header and the action button, so refresh those
+    const btn=document.querySelector('[data-act="drawer"]');
+    if(btn)btn.textContent="VIEW ALL "+cards.length+" CARDS";
+    const cnt=document.querySelector("#cardsInShipment");
+    if(cnt)cnt.textContent=cards.length;
+  }catch(e){
+    if(e.status===501){const t=$("#shipTable");if(t)t.remove();return}
+    meta.textContent="order "+o.id+" · failed";
+    body.innerHTML=`Could not load the shipment. ${esc(e.message)}<br>
+      <span style="color:var(--amber)">If this timed out, the order-wide query is slow — set ORDER_QUESTION_ID to a
+      dedicated question (see db/order-question.sql) instead of 4093.</span>`;
+  }
 }
 
 function lifecycleTable(c){
@@ -531,10 +571,9 @@ function lifecycleTable(c){
 }
 function orderCardsTable(o,hit){
   if(!o.cards||!o.cards.length)return `<div class="sec" id="shipTable" style="margin:0;border:none;border-radius:0">
-    <div class="sec-h"><span class="tag">CARDS IN THIS SHIPMENT</span><span class="meta">order ${o.id}</span></div>
-    <div class="empty">Not loaded — question 4093 filters by card, so it can't list an order's contents.<br>
-    Save <b>db/order-question.sql</b> as a Metabase question with a Number variable named <b>order_number</b>,
-    then set <b>ORDER_QUESTION_ID</b> in Vercel.</div></div>`;
+    <div class="sec-h"><span class="tag">CARDS IN THIS SHIPMENT</span>
+      <span class="meta" id="shipMeta">order ${o.id} · loading…</span></div>
+    <div class="empty" id="shipBody">Fetching the other cards on this order…</div></div>`;
   return `<div class="sec" id="shipTable" style="margin:0;border:none;border-radius:0">
     <div class="sec-h"><span class="tag">CARDS IN THIS SHIPMENT</span><span class="meta">${o.cards.length} card${o.cards.length>1?"s":""} · order ${o.id}</span></div>
     <div class="tw" style="max-height:300px"><table><thead><tr>
@@ -548,7 +587,7 @@ function orderCardsTable(o,hit){
 function summary(o,c){
   return ["Retrieval order: "+o.id,"Link: "+(o.orderUrl||"(no admin page — repack/purchase row)"),
     "Customer: "+o.customer+" ("+o.username+")","Email: "+o.email,
-    "Cards in shipment: "+(o.cards.length||"unknown"),"Ship date: "+o.shipDateStr,
+    (SHIPMENT_ON&&o.cards.length?"Cards in shipment: "+o.cards.length:""),"Ship date: "+o.shipDateStr,
     "Order created: "+o.createdStr,"Card status: "+o.status,
     c?("Card: AC "+c.ac+" / cert "+c.cert+" — "+c.player+", "+c.set+" "+c.insert+" "+c.parallel+", "+c.grade):""
   ].filter(Boolean).join("\n");
@@ -560,6 +599,7 @@ function summary(o,c){
 const SCAN={cert:$("#scanCert"),ac:$("#scanAc")};
 const BURST_MS=35,IDLE_MS=90;
 let autoSubmit=true;
+let SHIPMENT_ON=false;   // set from /api/health — only on when ORDER_QUESTION_ID is configured
 const isTerm=e=>e.key==="Enter"||e.key==="Tab"||e.keyCode===13||e.keyCode===9;
 
 let scanSeq=0;

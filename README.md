@@ -105,22 +105,35 @@ Both are shown; the hero chip uses `card_status` and the fields show
 `slab_pack (repack)`, `auction` and `purchase` are UNIONed, so a card can appear
 in all four. Only `order_kind = 'retrieve'` is the shipment CS acts on.
 
-### Shipment contents — "what else was in the box"
+### Shipment contents — off by default
 
-Question 4093 filters by card, so it cannot list an order's contents. To fill
-the **Cards in this shipment** table:
+The **cards in this shipment** section is hidden unless `ORDER_QUESTION_ID` is
+set. Nothing about it is needed for a return-to-sender: the retrieval order,
+customer and email are the answer, and they come from the card lookup.
 
-1. In Metabase, create a new SQL question against Snowflake and paste
-   `db/order-question.sql`.
-2. Add one variable named **`order_number`**, type **Number**.
-3. Save it, note the question id from its URL.
-4. Set `ORDER_QUESTION_ID` to that id in Vercel and redeploy.
+Set the variable to turn it on, with two options:
 
-The SQL selects the same column names 4093 uses, so the app parses both with the
-same code. Repack and purchase orders have no `public.orders` row, so the table
-stays empty for those — expected, not an error.
+- **`ORDER_QUESTION_ID=4093`** — works, because 4093 now carries
+  `[[ AND ao.order_ref ILIKE {{order_number}} || '%' ]]`. But it is slow:
+  filtering by order alone leaves `match_card` unfiltered — every row in
+  `admin.cards`, joined across four UNIONed order sources, before the final
+  `WHERE` narrows to one order. A cert lookup filters at the top of the CTE;
+  this filters at the very bottom.
+- **A dedicated question** from `db/order-question.sql` — hits
+  `public.orders → order_items → admin.cards` directly and returns in
+  milliseconds.
 
-Without this, everything else works; that one table shows a note instead.
+Either way it is fetched by its own request (`/api/shipment`) after the result
+renders, so the retrieval order appears immediately and a slow order query can
+never take the main lookup down with it. `SHIPMENT_TIMEOUT_MS` (default 25000)
+caps the wait.
+
+`order_number`'s declared type in Metabase is ambiguous — the SQL matches it
+with `ILIKE ... || '%'` like the text variables, but its filter widget is
+configured like the numeric ones. The endpoint sends it as text and retries as a
+number if Metabase rejects the parameter, so either declaration works. Because
+the match is a prefix, rows whose `order_number` is not an exact match are then
+discarded — otherwise `1830391` would also return `18303912`.
 
 ### Ship date
 
@@ -159,6 +172,7 @@ reload, and a warning is logged to the console.
 |---|---|---|
 | `/api/lookup?cert=79067707` | GET | Card + retrieval order + life-cycle |
 | `/api/lookup?ac=3975830` | GET | Same, matched on AC number |
+| `/api/shipment?order=18303912` | GET | Other cards on that order (501 when `ORDER_QUESTION_ID` is unset) |
 | `/api/history` | GET | Completed work (`?days=N`) |
 | `/api/history` | POST | Log one completed item |
 | `/api/history?id=123` | DELETE | Undo one entry |
@@ -194,6 +208,7 @@ QR payloads are parsed as URLs (`/c/8AC0001234`, `?cert_number=…`), JSON
 index.html          single-page UI, no build step
 api/lookup.js       cert / AC -> retrieval order
 api/history.js      completed work log (Neon)
+api/shipment.js     cards on an order, fetched after the result renders
 api/health.js       config check
 lib/metabase.js     Metabase client, API key stays server-side
 lib/normalize.js    4093 rows -> card + retrieval order, picks the retrieve row
